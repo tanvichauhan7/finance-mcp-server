@@ -1,53 +1,52 @@
-const { execSync } = require("child_process");
 const fs = require("fs");
+const path = require("path");
+const { execSync } = require("child_process");
 
-console.log("");
-console.log("========================================");
-console.log("   NovaTech Finance MCP Setup");
-console.log("========================================");
-console.log("");
+console.log(`
+========================================
+   Finance MCP Setup
+========================================
+`);
 
-function run(command) {
-  console.log(`> ${command}`);
-  execSync(command, { stdio: "inherit" });
+const excelFile = path.join(__dirname, "Test_POC.xlsx");
+
+if (!fs.existsSync(excelFile)) {
+  console.error(`
+========================================
+   SETUP FAILED
+========================================
+
+Test_POC.xlsx was not found in the project folder.
+`);
+  process.exit(1);
 }
 
+console.log("Test_POC.xlsx found.");
+console.log("Importing Excel data into MongoDB...\n");
+
 try {
-  // Check Excel model
-  if (!fs.existsSync("NovaTech_Finance_Model.xlsx")) {
-    throw new Error(
-      "NovaTech_Finance_Model.xlsx was not found in the project folder."
-    );
-  }
+  execSync("node src/importExcel.cjs", {
+    stdio: "inherit",
+    cwd: __dirname
+  });
 
-  console.log("✓ Excel finance model found");
+  console.log(`
+========================================
+   SETUP COMPLETE
+========================================
 
-  // Import Excel into MongoDB
-  run("node src/importExcel.cjs");
+Database: finance_model
 
-  console.log("");
-  console.log("========================================");
-  console.log("   SETUP COMPLETE");
-  console.log("========================================");
-  console.log("");
-  console.log("Database: finance_model");
-  console.log("Collections:");
-  console.log("  - revenue");
-  console.log("  - expenses");
-  console.log("  - headcount");
-  console.log("  - assumptions");
-  console.log("  - budgets");
-  console.log("");
-  console.log("Your Finance MCP Server is ready.");
-  console.log("");
+Your Finance MCP Server is ready.
+========================================
+`);
 
 } catch (error) {
-  console.error("");
-  console.error("========================================");
-  console.error("   SETUP FAILED");
-  console.error("========================================");
-  console.error("");
-  console.error(error.message);
-  console.error("");
+  console.error(`
+========================================
+   SETUP FAILED
+========================================
+`);
+
   process.exit(1);
 }

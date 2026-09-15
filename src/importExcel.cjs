@@ -8,38 +8,41 @@ require("dotenv").config();
 const uri = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017";
 const dbName = process.env.MONGODB_DB || "finance_model";
 
-const excelPath = path.join(__dirname, "..", "NovaTech_Finance_Model.xlsx");
+// NEW workbook
+const excelPath = path.join(__dirname, "..", "Test_POC.xlsx");
 
-const collections = [
-  "Revenue",
-  "Expenses",
-  "Headcount",
-  "Assumptions",
-  "Budgets"
-];
+// Sheet → Collection mapping
+const sheetMapping = {
+  "01_Client_Master": "client_master",
+  "02_Financial_Actuals": "financial_actuals",
+  "03_Volume_Metrics": "volume_metrics",
+  "04_Rebate_Economics": "rebate_economics",
+  "05_Profitability_Summary": "profitability_summary",
+  "07_Data_Dictionary": "data_dictionary",
+  "08_Business_Rules": "business_rules",
+  "10_Validation_Results": "validation_results"
+};
 
 async function main() {
   if (!fs.existsSync(excelPath)) {
     throw new Error(`Excel file not found: ${excelPath}`);
   }
 
-  console.log("Reading Excel file...");
+  console.log("Reading Test_POC.xlsx...");
   const workbook = XLSX.readFile(excelPath);
 
   const client = new MongoClient(uri);
 
   try {
     await client.connect();
-
     const db = client.db(dbName);
 
-    for (const sheetName of collections) {
+    for (const [sheetName, collectionName] of Object.entries(sheetMapping)) {
+
       if (!workbook.SheetNames.includes(sheetName)) {
         console.log(`Skipping missing sheet: ${sheetName}`);
         continue;
       }
-
-      const collectionName = sheetName.toLowerCase();
 
       const worksheet = workbook.Sheets[sheetName];
 
@@ -47,38 +50,31 @@ async function main() {
         defval: null
       });
 
-      console.log(
-        `${sheetName}: ${documents.length} records`
-      );
+      console.log(`${sheetName}: ${documents.length} records`);
 
       const collection = db.collection(collectionName);
 
-      // Remove old data from this collection
       await collection.deleteMany({});
 
-      // Insert new Excel data
       if (documents.length > 0) {
         await collection.insertMany(documents);
       }
 
-      console.log(
-        `Imported ${documents.length} records into ${collectionName}`
-      );
+      console.log(`Imported ${documents.length} records into ${collectionName}`);
     }
 
-    console.log("");
-    console.log("====================================");
-    console.log("Excel import completed successfully!");
+    console.log("\n====================================");
+    console.log("POC Excel import completed successfully!");
     console.log(`Database: ${dbName}`);
     console.log("====================================");
+
   } finally {
     await client.close();
   }
 }
 
-main().catch((error) => {
-  console.error("");
-  console.error("IMPORT FAILED");
-  console.error(error);
+main().catch((err) => {
+  console.error("\nIMPORT FAILED");
+  console.error(err);
   process.exit(1);
 });
